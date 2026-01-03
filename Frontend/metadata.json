@@ -1,0 +1,9 @@
+{
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
+  "name": "SharePlate",
+  "description": "A smart food donation platform connecting donors with communities. Features AI-powered recipe generation for leftovers, smart food safety tips, and seamless donation coordination."
+}
