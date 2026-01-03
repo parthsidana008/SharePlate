@@ -126,12 +126,6 @@ Authorization: Bearer <token>
 
 Tokens are automatically stored in localStorage after login and included in all API requests.
 
-## Next Steps
-
-1. Set up MongoDB (local or MongoDB Atlas)
-2. Add your Gemini API key to Backend/.env (get it from https://makersuite.google.com/app/apikey)
-3. Update JWT_SECRET in Backend/.env
-4. Start both servers and test the application
 
 ## Notes
 
