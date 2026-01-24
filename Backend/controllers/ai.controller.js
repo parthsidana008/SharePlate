@@ -128,67 +128,6 @@ export const analyzeFoodImage = async (req, res) => {
   }
 };
 
-// @desc    Generate leftover recipes
-// @route   POST /api/ai/recipes
-// @access  Private
-export const generateRecipes = async (req, res) => {
-  try {
-    const { ingredients } = req.body;
-
-    if (!ingredients) {
-      return res.status(400).json({
-        success: false,
-        message: 'Ingredients are required'
-      });
-    }
-
-    const model = getGeminiClient().getGenerativeModel({ 
-      model: 'gemini-2.0-flash-exp',
-      generationConfig: {
-        responseMimeType: 'application/json'
-      }
-    });
-
-    const prompt = `You are a chef. Suggest 3 recipes using these ingredients (and basic pantry staples): ${ingredients}. Return a JSON object with a "recipes" array. Each recipe should have: name (string), ingredients (array of strings), instructions (array of strings), difficulty ("Easy" | "Medium" | "Hard"), and prepTime (string like "15 minutes"). Format: {"recipes": [{"name": "...", "ingredients": [...], "instructions": [...], "difficulty": "...", "prepTime": "..."}, ...]}`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const responseText = response.text();
-    
-    let recipes;
-    try {
-      const parsed = JSON.parse(responseText);
-      recipes = Array.isArray(parsed) ? parsed : (parsed.recipes || []);
-    } catch (error) {
-      recipes = [];
-    }
-
-    res.status(200).json({
-      success: true,
-      data: {
-        recipes
-      }
-    });
-  } catch (error) {
-    console.error('Gemini Recipe Error:', error);
-    // Fallback recipes
-    res.status(200).json({
-      success: true,
-      data: {
-        recipes: [
-          {
-            name: "Simple Stir Fry",
-            ingredients: ["Mixed Vegetables", "Rice", "Soy Sauce", "Oil"],
-            instructions: ["Chop vegetables", "Stir fry in oil", "Add soy sauce", "Serve over rice"],
-            difficulty: "Easy",
-            prepTime: "20 minutes"
-          }
-        ]
-      }
-    });
-  }
-};
-
 // @desc    Chat with AI assistant
 // @route   POST /api/ai/chat
 // @access  Private

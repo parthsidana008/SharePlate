@@ -223,9 +223,24 @@ const AddDonation = ({ onCancel, onSubmit }) => {
                             value={location}
                             onChange={(e) => setLocation(e.target.value)}
                             placeholder="City or Area"
-                            className="block w-full bg-slate-50 border-none rounded-lg py-2.5 px-3 pl-9 text-sm text-slate-900 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
+                            className="block w-full bg-slate-50 border-none rounded-lg py-2.5 px-3 pl-9 pr-24 text-sm text-slate-900 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
                         />
                         <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                try {
+                                    const { getCurrentLocation } = await import('../services/locationService');
+                                    const loc = await getCurrentLocation();
+                                    setLocation(loc.locationString);
+                                } catch (error) {
+                                    alert(error.message || 'Unable to detect location');
+                                }
+                            }}
+                            className="absolute right-2 top-1.5 px-2 py-1 bg-green-100 hover:bg-green-200 text-xs font-medium text-green-700 rounded-md transition-colors"
+                        >
+                            Auto Detect
+                        </button>
                     </div>
                 </div>
                 <div>
