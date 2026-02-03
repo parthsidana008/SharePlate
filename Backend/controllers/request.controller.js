@@ -1,5 +1,6 @@
 import Request from '../models/Request.model.js';
 import Donation from '../models/Donation.model.js';
+import { handleNewRequest, handleRequestStatusUpdate } from '../socket/handlers/requestHandler.js';
 
 // @desc    Create request for donation
 // @route   POST /api/requests
@@ -52,6 +53,9 @@ export const createRequest = async (req, res) => {
     await request.populate('donation', 'title imageUrl donorName location');
     await request.populate('recipient', 'name email');
 
+    // Emit WebSocket event to notify donor
+    handleNewRequest(request._id);
+
     res.status(201).json({
       success: true,
       message: 'Request created successfully',
@@ -73,7 +77,14 @@ export const createRequest = async (req, res) => {
 export const getMyRequests = async (req, res) => {
   try {
     const requests = await Request.find({ recipient: req.user.id })
-      .populate('donation', 'title imageUrl donorName location type quantity')
+      .populate({
+        path: 'donation',
+        select: 'title imageUrl donorName location type quantity donor',
+        populate: {
+          path: 'donor',
+          select: '_id name email'
+        }
+      })
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -167,6 +178,9 @@ export const updateRequestStatus = async (req, res) => {
     await request.populate('donation', 'title imageUrl donorName location');
     await request.populate('recipient', 'name email');
 
+    // Emit WebSocket event to notify both donor and recipient
+    handleRequestStatusUpdate(request._id, status);
+
     res.status(200).json({
       success: true,
       message: 'Request status updated successfully',
@@ -188,7 +202,14 @@ export const updateRequestStatus = async (req, res) => {
 export const getRequest = async (req, res) => {
   try {
     const request = await Request.findById(req.params.id)
-      .populate('donation', 'title imageUrl donorName location type quantity expiresIn')
+      .populate({
+        path: 'donation',
+        select: 'title imageUrl donorName location type quantity expiresIn donor',
+        populate: {
+          path: 'donor',
+          select: '_id name email'
+        }
+      })
       .populate('recipient', 'name email phone location');
 
     if (!request) {

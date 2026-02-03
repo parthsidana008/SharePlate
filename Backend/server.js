@@ -6,8 +6,12 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
+import { createServer } from 'http';
 import connectDB from './config/database.js';
 import errorHandler from './middleware/errorHandler.js';
+import { initializeSocket } from './socket/socketServer.js';
+import { setupSocketHandlers } from './socket/socketHandlers.js';
+import { socketAuth } from './socket/middleware/socketAuth.js';
 
 // Import Routes
 import authRoutes from './routes/auth.routes.js';
@@ -58,9 +62,23 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Initialize Socket.IO
+const io = initializeSocket(httpServer);
+
+// Apply authentication middleware to Socket.IO
+io.use(socketAuth);
+
+// Setup socket handlers
+setupSocketHandlers(io);
+
+// Start server
+httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 API URL: http://localhost:${PORT}`);
+  console.log(`🔌 WebSocket server initialized`);
 });
 

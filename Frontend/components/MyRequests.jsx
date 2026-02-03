@@ -1,20 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { MessageSquare, CheckCircle2, Clock, Package, MapPin, X, Send, ChevronRight, Phone } from 'lucide-react';
+import { useSocket } from '../context/SocketContext';
+import { useAuth } from '../context/AuthContext';
+import { getSocket } from '../services/socketService';
+import api from '../utils/api';
 
 const MyRequests = ({ requests }) => {
   const [selectedRequest, setSelectedRequest] = useState(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
-  const [chatHistory, setChatHistory] = useState([
-      {sender: 'them', text: 'Hi! Thanks for requesting. When can you pick it up?', time: '10:30 AM'}
-  ]);
+  const [chatHistory, setChatHistory] = useState([]);
   const chatScrollRef = useRef(null);
+  const { sendMessage } = useSocket();
+  const { user } = useAuth();
 
   useEffect(() => {
-      if(isChatOpen && chatScrollRef.current) {
+      if(chatScrollRef.current) {
           chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
       }
-  }, [chatHistory, isChatOpen]);
+  }, [chatHistory]);
 
   const getStatusStep = (status) => {
     switch (status) {
@@ -36,15 +39,107 @@ const MyRequests = ({ requests }) => {
       }
   };
 
-  const handleSendMessage = () => {
-      if (!chatMessage.trim()) return;
-      setChatHistory([...chatHistory, {sender: 'me', text: chatMessage, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}]);
-      setChatMessage('');
+  // Listen for incoming messages
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket || !socket.connected) {
+      console.log('Socket not connected');
+      return;
+    }
+
+    const handleReceiveMessage = (data) => {
+      console.log('Received message:', data);
+      if (selectedRequest && (
+        data.requestId === selectedRequest.id || 
+        data.requestId === selectedRequest._id ||
+        data.requestId?.toString() === selectedRequest.id?.toString() ||
+        data.requestId?.toString() === selectedRequest._id?.toString() ||
+        data.donationId === selectedRequest.donationId ||
+        data.donationId?.toString() === selectedRequest.donationId?.toString()
+      )) {
+        console.log('Message matches current request, adding to chat history');
+        setChatHistory(prev => [...prev, {
+          sender: 'them',
+          text: data.message,
+          time: new Date(data.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
+      } else {
+        console.log('Message does not match current request', { data, selectedRequest });
+      }
+    };
+
+    socket.on('receive_message', handleReceiveMessage);
+
+    return () => {
+      socket.off('receive_message', handleReceiveMessage);
+    };
+  }, [selectedRequest]);
+
+  const handleSendMessage = async () => {
+    if (!chatMessage.trim() || !selectedRequest) return;
+    
+    const messageText = chatMessage;
+    const donationId = selectedRequest.donationId || selectedRequest.donation?._id || selectedRequest.donation?.id;
+    const requestId = selectedRequest.id || selectedRequest._id;
+    
+    // Get donor ID from the request - try multiple paths
+    // The request structure from API has donation populated with donor info
+    let donorId = selectedRequest.raw?.donation?.donor?._id || 
+                  selectedRequest.raw?.donation?.donor?._id?.toString() ||
+                  selectedRequest.raw?.donation?.donor?.toString() ||
+                  selectedRequest.raw?.donation?.donor ||
+                  selectedRequest.donation?.donor?._id ||
+                  selectedRequest.donation?.donor;
+    
+    // If still no donorId, try to fetch the request details to get donor info
+    if (!donorId) {
+      try {
+        const response = await api.get(`/requests/${requestId}`);
+        const fullRequest = response.data.data.request;
+        donorId = fullRequest.donation?.donor?._id || 
+                  fullRequest.donation?.donor?._id?.toString() ||
+                  fullRequest.donation?.donor?.toString() ||
+                  fullRequest.donation?.donor;
+        
+        // Update the selectedRequest with the fetched data
+        if (donorId && selectedRequest.raw) {
+          selectedRequest.raw.donation = fullRequest.donation;
+        }
+      } catch (err) {
+        console.error('Error fetching request details:', err);
+      }
+    }
+    
+    if (!donorId) {
+      console.error('Donor ID not found in request:', selectedRequest);
+      console.log('Full request structure:', JSON.stringify(selectedRequest, null, 2));
+      alert('Unable to send message: Donor information not available. Please refresh the page.');
+      return;
+    }
+    
+    // Add message to local history immediately
+    const newMessage = {
+      sender: 'me',
+      text: messageText,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setChatHistory(prev => [...prev, newMessage]);
+    setChatMessage('');
+    
+    // Send via WebSocket
+    try {
+      const socket = getSocket();
+      if (!socket || !socket.connected) {
+        alert('WebSocket not connected. Please refresh the page.');
+        return;
+      }
       
-      // Simulating reply
-      setTimeout(() => {
-          setChatHistory(prev => [...prev, {sender: 'them', text: "That works for me. See you then!", time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}]);
-      }, 1500);
+      console.log('Sending message:', { recipientId: donorId.toString(), message: messageText, requestId, donationId });
+      sendMessage(donorId.toString(), messageText, requestId, donationId);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('Failed to send message. Please try again.');
+    }
   };
 
   return (
@@ -68,7 +163,11 @@ const MyRequests = ({ requests }) => {
             requests.map((req) => (
                 <div 
                 key={req.id}
-                onClick={() => {setSelectedRequest(req); setIsChatOpen(false);}}
+                onClick={() => {
+                  setSelectedRequest(req); 
+                  // Reset chat history when selecting a new request
+                  setChatHistory([]);
+                }}
                 className={`bg-white p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md flex items-center gap-4 ${selectedRequest?.id === req.id ? 'border-green-500 ring-1 ring-green-500 shadow-md' : 'border-slate-200'}`}
                 >
                 <img src={req.imageUrl} alt={req.donationTitle} className="w-16 h-16 rounded-lg object-cover bg-slate-100" />
@@ -145,25 +244,67 @@ const MyRequests = ({ requests }) => {
                         )}
 
                         {(selectedRequest.status === 'Confirmed' || selectedRequest.status === 'Ready for Pickup') && (
-                            <div className="w-full max-w-md space-y-4">
+                            <div className="w-full max-w-2xl">
                                 <div className="bg-green-50 p-4 rounded-xl border border-green-100 mb-6">
                                     <h4 className="font-bold text-green-800 flex items-center justify-center gap-2">
                                         <CheckCircle2 className="w-5 h-5" /> Request Accepted!
                                     </h4>
-                                    <p className="text-green-700 text-sm mt-1">Please coordinate the pickup time with the donor.</p>
+                                    <p className="text-green-700 text-sm mt-1">Coordinate the pickup time with the donor.</p>
                                 </div>
                                 
-                                <button 
-                                    onClick={() => setIsChatOpen(true)}
-                                    className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <MessageSquare className="w-5 h-5" />
-                                    Chat with {selectedRequest.donorName}
-                                </button>
-                                <button className="w-full py-4 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2">
-                                    <Phone className="w-5 h-5" />
-                                    Call Donor
-                                </button>
+                                {/* Integrated Chat */}
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[400px]">
+                                    <div className="bg-slate-900 text-white p-3 flex items-center justify-between flex-shrink-0 rounded-t-xl">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center font-bold text-xs">
+                                                {selectedRequest.donorName.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-sm">Chat with {selectedRequest.donorName}</h4>
+                                                <span className="text-[10px] text-green-400 flex items-center gap-1"><span className="w-1 h-1 bg-green-400 rounded-full"></span> Online</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex-1 bg-slate-50 p-3 overflow-y-auto space-y-2 min-h-0" ref={chatScrollRef}>
+                                        {chatHistory.length === 0 ? (
+                                            <div className="flex items-center justify-center h-full">
+                                                <div className="text-center text-slate-400">
+                                                    <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                                    <p className="text-xs">No messages yet. Start the conversation!</p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            chatHistory.map((msg, idx) => (
+                                                <div key={idx} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+                                                    <div className={`max-w-[75%] rounded-lg p-2 px-3 ${msg.sender === 'me' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none shadow-sm'}`}>
+                                                        <p className="text-xs leading-relaxed">{msg.text}</p>
+                                                        <span className={`text-[9px] block text-right mt-0.5 ${msg.sender === 'me' ? 'text-indigo-200' : 'text-slate-400'}`}>{msg.time}</span>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    <div className="p-3 bg-white border-t border-slate-100 flex-shrink-0 rounded-b-xl">
+                                        <div className="flex gap-2">
+                                            <input 
+                                                type="text" 
+                                                value={chatMessage}
+                                                onChange={(e) => setChatMessage(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                                placeholder="Type a message..."
+                                                className="flex-1 bg-slate-100 border-none rounded-full px-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none placeholder-slate-400"
+                                            />
+                                            <button 
+                                                onClick={handleSendMessage}
+                                                className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors shadow-md"
+                                            >
+                                                <Send className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -186,55 +327,6 @@ const MyRequests = ({ requests }) => {
                         )}
                     </div>
 
-                    {/* Chat Overlay */}
-                    {isChatOpen && (
-                        <div className="absolute inset-0 bg-white z-20 flex flex-col animate-[slideUp_0.3s_ease-out]">
-                             <div className="bg-slate-900 text-white p-4 flex items-center justify-between shadow-md flex-shrink-0">
-                                 <div className="flex items-center gap-3">
-                                     <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center font-bold text-sm">
-                                         {selectedRequest.donorName.charAt(0)}
-                                     </div>
-                                     <div>
-                                         <h4 className="font-bold">{selectedRequest.donorName}</h4>
-                                         <span className="text-xs text-green-400 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span> Online</span>
-                                     </div>
-                                 </div>
-                                 <button onClick={() => setIsChatOpen(false)} className="p-2 hover:bg-white/10 rounded-full">
-                                     <X className="w-5 h-5" />
-                                 </button>
-                             </div>
-                             
-                             <div className="flex-1 bg-slate-50 p-4 overflow-y-auto space-y-4" ref={chatScrollRef}>
-                                 {chatHistory.map((msg, idx) => (
-                                     <div key={idx} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-                                         <div className={`max-w-[80%] rounded-2xl p-3 px-4 ${msg.sender === 'me' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none shadow-sm'}`}>
-                                             <p className="text-sm">{msg.text}</p>
-                                             <span className={`text-[10px] block text-right mt-1 ${msg.sender === 'me' ? 'text-indigo-200' : 'text-slate-400'}`}>{msg.time}</span>
-                                         </div>
-                                     </div>
-                                 ))}
-                             </div>
-
-                             <div className="p-4 bg-white border-t border-slate-100 flex-shrink-0">
-                                 <div className="flex gap-2">
-                                     <input 
-                                        type="text" 
-                                        value={chatMessage}
-                                        onChange={(e) => setChatMessage(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                                        placeholder="Type a message..."
-                                        className="flex-1 bg-slate-100 border-none rounded-full px-4 py-3 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none placeholder-slate-400"
-                                     />
-                                     <button 
-                                        onClick={handleSendMessage}
-                                        className="p-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
-                                     >
-                                         <Send className="w-5 h-5" />
-                                     </button>
-                                 </div>
-                             </div>
-                        </div>
-                    )}
                 </div>
             ) : (
                 <div className="h-full flex flex-col items-center justify-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-slate-400">

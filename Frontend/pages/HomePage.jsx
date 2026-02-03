@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import DonationCard from '../components/DonationCard';
@@ -12,6 +11,7 @@ import EditDonation from '../components/EditDonation';
 import { Search, SlidersHorizontal, MapPin, X, Bell } from 'lucide-react';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 
 const HomePage = () => {
   const [currentView, setCurrentView] = useState('home');
@@ -22,10 +22,10 @@ const HomePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [userLocation, setUserLocation] = useState('');
   const [notification, setNotification] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [editingDonation, setEditingDonation] = useState(null);
+  const [requestedDonations, setRequestedDonations] = useState(new Set());
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const { notifications } = useSocket();
   const donationsSectionRef = useRef(null);
 
   // Fetch donations on mount
@@ -46,6 +46,27 @@ const HomePage = () => {
       loadData();
     }
   }, [user?.role]);
+
+  // Listen to WebSocket notifications
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const latestNotification = notifications[0];
+      
+      // Show notification toast
+      if (latestNotification.type === 'new_request' || latestNotification.type === 'request_status_update') {
+        showNotification(latestNotification.message, 'info');
+        
+        // Refresh relevant data
+        if (user?.role === 'donor') {
+          fetchDonationRequests();
+          fetchMyDonations();
+        } else {
+          fetchMyRequests();
+        }
+        fetchDonations();
+      }
+    }
+  }, [notifications]);
 
   const fetchDonations = async () => {
     try {
@@ -73,6 +94,14 @@ const HomePage = () => {
         raw: r
       }));
       setMyRequests(normalized);
+      
+      // Track requested donations
+      const requestedIds = new Set(
+        normalized
+          .filter(r => ['Pending', 'Confirmed', 'Ready for Pickup'].includes(r.status))
+          .map(r => r.donationId)
+      );
+      setRequestedDonations(requestedIds);
     } catch (error) {
       console.error('Error fetching requests:', error);
     }
@@ -154,6 +183,10 @@ const HomePage = () => {
         donationId: donation._id || donation.id,
         message: 'I would like to request this donation'
       });
+      
+      // Mark donation as requested immediately
+      const donationId = donation._id || donation.id;
+      setRequestedDonations(prev => new Set([...prev, donationId]));
       
       await fetchMyRequests();
       showNotification(
@@ -299,6 +332,7 @@ const HomePage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filteredDonations.map((d) => {
                     const isMyDonation = user?.role === 'donor' && myDonations.some(md => (md._id || md.id) === (d._id || d.id));
+                    const isRequested = requestedDonations.has(d._id || d.id);
                     return (
                       <DonationCard
                         key={d._id || d.id}
@@ -312,6 +346,7 @@ const HomePage = () => {
                           await handleDeleteDonation(donation._id || donation.id);
                         }}
                         isDonorOwned={isMyDonation}
+                        isRequested={isRequested}
                       />
                     );
                   })}

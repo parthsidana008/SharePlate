@@ -1,7 +1,7 @@
 import { Clock, MapPin, CheckCircle2, ShoppingBag, Edit2, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const DonationCard = ({ donation, onRequest, onEdit, onDelete, isDonorOwned = false }) => {
+const DonationCard = ({ donation, onRequest, onEdit, onDelete, isDonorOwned = false, isRequested = false }) => {
   const { user } = useAuth();
   
   const getTypeColor = (type) => {
@@ -82,10 +82,15 @@ const DonationCard = ({ donation, onRequest, onEdit, onDelete, isDonorOwned = fa
              </div>
            ) : (
              <button 
-               onClick={() => onRequest(donation)}
-               className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors active:scale-95"
+               onClick={() => !isRequested && onRequest(donation)}
+               disabled={isRequested}
+               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors active:scale-95 ${
+                 isRequested
+                   ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                   : 'bg-slate-900 text-white hover:bg-slate-800'
+               }`}
              >
-               Request
+               {isRequested ? 'Requested' : 'Request'}
              </button>
            )}
         </div>

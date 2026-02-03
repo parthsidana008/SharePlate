@@ -10,16 +10,6 @@ export const getFoodSafetyTips = async (foodItem) => {
   }
 };
 
-export const generateLeftoverRecipes = async (ingredients) => {
-  try {
-    const response = await api.post('/ai/recipes', { ingredients });
-    return response.data.data.recipes || [];
-  } catch (error) {
-    console.error("API Error:", error);
-    return [];
-  }
-};
-
 export const analyzeFoodImage = async (base64Image) => {
   try {
     const response = await api.post('/ai/analyze-image', { imageBase64: base64Image });
