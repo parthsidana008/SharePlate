@@ -170,7 +170,7 @@ const HomePage = () => {
     setTimeout(() => setNotification(null), 5000);
   };
 
-  const handleDetectLocation = () => {
+  const handleDetectLocation = async () => {
     if (!navigator.geolocation) {
       showNotification('Geolocation is not supported by your browser', 'info');
       return;
@@ -178,17 +178,17 @@ const HomePage = () => {
 
     showNotification('Detecting location...', 'info');
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setTimeout(() => {
-          setUserLocation('Downtown');
-          showNotification('Location detected: Downtown', 'success');
-        }, 1000);
-      },
-      () => {
-        showNotification('Unable to retrieve your location', 'info');
-      }
-    );
+    try {
+      // Use the location service to get coordinates and reverse geocode
+      const { getCurrentLocation } = await import('../services/locationService');
+      const location = await getCurrentLocation();
+      
+      setUserLocation(location.locationString);
+      showNotification(`Location detected: ${location.locationString}`, 'success');
+    } catch (error) {
+      console.error('Location detection error:', error);
+      showNotification(error.message || 'Unable to retrieve your location', 'info');
+    }
   };
 
   const scrollToDonations = () => {
@@ -206,8 +206,18 @@ const HomePage = () => {
       title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       description.toLowerCase().includes(searchTerm.toLowerCase());
 
+    // Flexible location matching - check if any word from userLocation exists in donation location
     const matchesLocation = userLocation
-      ? location.toLowerCase().includes(userLocation.toLowerCase())
+      ? (() => {
+          const userWords = userLocation.toLowerCase().split(/[\s,]+/).filter(w => w.length > 2);
+          const locationWords = location.toLowerCase().split(/[\s,]+/).filter(w => w.length > 2);
+          // Match if any word from user's location appears in donation location
+          return userWords.some(userWord => 
+            locationWords.some(locWord => 
+              locWord.includes(userWord) || userWord.includes(locWord)
+            )
+          );
+        })()
       : true;
 
     return matchesSearch && matchesLocation;
