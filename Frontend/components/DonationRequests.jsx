@@ -4,12 +4,15 @@ import api from '../utils/api';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import { getSocket } from '../services/socketService';
+import { saveMessage, getMessages } from '../services/messageService';
 
 const DonationRequests = ({ requests = [], onUpdate }) => {
   const [loadingIds, setLoadingIds] = useState([]);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const chatScrollRef = useRef(null);
   const { sendMessage } = useSocket();
   const { user } = useAuth();
@@ -94,7 +97,7 @@ const DonationRequests = ({ requests = [], onUpdate }) => {
     };
   }, [selectedRequest]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!chatMessage.trim() || !selectedRequest) return;
     
     const messageText = chatMessage;
@@ -114,27 +117,62 @@ const DonationRequests = ({ requests = [], onUpdate }) => {
       setChatHistory(prev => [...prev, newMessage]);
       setChatMessage('');
       
-    // Send via WebSocket
-    try {
-      const socket = getSocket();
-      if (!socket || !socket.connected) {
-        alert('WebSocket not connected. Please refresh the page.');
-        return;
+      // Save to backend
+      try {
+        await saveMessage(requestId, messageText, recipientId.toString());
+      } catch (error) {
+        console.error('Error saving message to backend:', error);
       }
       
-      console.log('Sending message:', { recipientId: recipientId.toString(), message: messageText, requestId, donationId });
-      sendMessage(recipientId.toString(), messageText, requestId, donationId);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      alert('Failed to send message. Please try again.');
-    }
+      // Send via WebSocket
+      try {
+        const socket = getSocket();
+        if (!socket || !socket.connected) {
+          alert('WebSocket not connected. Please refresh the page.');
+          return;
+        }
+        
+        console.log('Sending message:', { recipientId: recipientId.toString(), message: messageText, requestId, donationId });
+        sendMessage(recipientId.toString(), messageText, requestId, donationId);
+      } catch (error) {
+        console.error('Error sending message:', error);
+        alert('Failed to send message. Please try again.');
+      }
     }
   };
 
   const handleRequestSelect = (req) => {
     setSelectedRequest(req);
-    // Reset chat history when selecting a new request - no default messages
+    setIsChatOpen(false);
+    // Reset chat history when selecting a new request
     setChatHistory([]);
+  };
+
+  const loadChatHistory = async (requestId) => {
+    setLoadingMessages(true);
+    try {
+      const messages = await getMessages(requestId);
+      // Convert backend messages to chat history format
+      const userId = user._id || user.id;
+      const formattedMessages = messages.map(msg => ({
+        sender: msg.sender._id.toString() === userId.toString() ? 'me' : 'them',
+        text: msg.message,
+        time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }));
+      setChatHistory(formattedMessages);
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const toggleChat = () => {
+    if (!isChatOpen && selectedRequest) {
+      const requestId = selectedRequest._id || selectedRequest.id || selectedRequest.raw?._id || selectedRequest.raw?.id;
+      loadChatHistory(requestId);
+    }
+    setIsChatOpen(!isChatOpen);
   };
 
   return (
@@ -256,70 +294,87 @@ const DonationRequests = ({ requests = [], onUpdate }) => {
                           <h4 className="font-bold text-green-800 flex items-center justify-center gap-2">
                             <CheckCircle2 className="w-5 h-5" /> Request Accepted!
                           </h4>
-                          <p className="text-green-700 text-sm mt-1">Chat with the recipient to coordinate pickup.</p>
+                          <p className="text-green-700 text-sm mt-1">Click the button below to chat with the recipient.</p>
                         </div>
                         
-                        {/* Integrated Chat */}
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[400px]">
-                          <div className="bg-slate-900 text-white p-3 flex items-center justify-between flex-shrink-0 rounded-t-xl">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center font-bold text-xs">
-                                {(selectedRequest.recipient?.name || selectedRequest.recipientName || selectedRequest.raw?.recipient?.name || 'R').charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-sm">Chat with {selectedRequest.recipient?.name || selectedRequest.recipientName || selectedRequest.raw?.recipient?.name || 'Recipient'}</h4>
-                                <span className="text-[10px] text-green-400 flex items-center gap-1"><span className="w-1 h-1 bg-green-400 rounded-full"></span> Online</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex-1 bg-slate-50 p-3 overflow-y-auto space-y-2 min-h-0" ref={chatScrollRef}>
-                            {chatHistory.length === 0 ? (
-                              <div className="flex items-center justify-center h-full">
-                                <div className="text-center text-slate-400">
-                                  <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                  <p className="text-xs">No messages yet. Start the conversation!</p>
+                        {/* Chat Toggle Button */}
+                        <button
+                          onClick={toggleChat}
+                          className="w-full max-w-md mx-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 font-medium shadow-md"
+                        >
+                          <MessageSquare className="w-5 h-5" />
+                          {isChatOpen ? 'Close Chat' : 'Chat with Recipient'}
+                        </button>
+
+                        {/* Integrated Chat - Only shown when isChatOpen is true */}
+                        {isChatOpen && (
+                          <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[400px] mt-4">
+                            <div className="bg-slate-900 text-white p-3 flex items-center justify-between flex-shrink-0 rounded-t-xl">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center font-bold text-xs">
+                                  {(selectedRequest.recipient?.name || selectedRequest.recipientName || selectedRequest.raw?.recipient?.name || 'R').charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <h4 className="font-bold text-sm">Chat with {selectedRequest.recipient?.name || selectedRequest.recipientName || selectedRequest.raw?.recipient?.name || 'Recipient'}</h4>
+                                  <span className="text-[10px] text-green-400 flex items-center gap-1"><span className="w-1 h-1 bg-green-400 rounded-full"></span> Online</span>
                                 </div>
                               </div>
-                            ) : (
-                              chatHistory.map((msg, idx) => (
-                                <div key={idx} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-                                  <div className={`max-w-[75%] rounded-lg p-2 px-3 ${
-                                    msg.sender === 'me' 
-                                      ? 'bg-indigo-600 text-white rounded-tr-none' 
-                                      : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none shadow-sm'
-                                  }`}>
-                                    <p className="text-xs leading-relaxed">{msg.text}</p>
-                                    <span className={`text-[9px] block text-right mt-0.5 ${
-                                      msg.sender === 'me' ? 'text-indigo-200' : 'text-slate-400'
-                                    }`}>
-                                      {msg.time}
-                                    </span>
+                            </div>
+                            
+                            <div className="flex-1 bg-slate-50 p-3 overflow-y-auto space-y-2 min-h-0" ref={chatScrollRef}>
+                              {loadingMessages ? (
+                                <div className="flex items-center justify-center h-full">
+                                  <div className="text-center text-slate-400">
+                                    <p className="text-xs">Loading messages...</p>
                                   </div>
                                 </div>
-                              ))
-                            )}
-                          </div>
+                              ) : chatHistory.length === 0 ? (
+                                <div className="flex items-center justify-center h-full">
+                                  <div className="text-center text-slate-400">
+                                    <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                    <p className="text-xs">No messages yet. Start the conversation!</p>
+                                  </div>
+                                </div>
+                              ) : (
+                                chatHistory.map((msg, idx) => (
+                                  <div key={idx} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[75%] rounded-lg p-2 px-3 ${
+                                      msg.sender === 'me' 
+                                        ? 'bg-indigo-600 text-white rounded-tr-none' 
+                                        : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none shadow-sm'
+                                    }`}>
+                                      <p className="text-xs leading-relaxed">{msg.text}</p>
+                                      <span className={`text-[9px] block text-right mt-0.5 ${
+                                        msg.sender === 'me' ? 'text-indigo-200' : 'text-slate-400'
+                                      }`}>
+                                        {msg.time}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
 
-                          <div className="p-3 bg-white border-t border-slate-100 flex-shrink-0 rounded-b-xl">
-                            <div className="flex gap-2">
-                              <input 
-                                type="text" 
-                                value={chatMessage}
-                                onChange={(e) => setChatMessage(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                                placeholder="Type a message..."
-                                className="flex-1 bg-slate-100 border-none rounded-full px-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none placeholder-slate-400"
-                              />
-                              <button 
-                                onClick={handleSendMessage}
-                                className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors shadow-md"
-                              >
-                                <Send className="w-4 h-4" />
-                              </button>
+                            <div className="p-3 bg-white border-t border-slate-100 flex-shrink-0 rounded-b-xl">
+                              <div className="flex gap-2">
+                                <input 
+                                  type="text" 
+                                  value={chatMessage}
+                                  onChange={(e) => setChatMessage(e.target.value)}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                  placeholder="Type a message..."
+                                  className="flex-1 bg-slate-100 border-none rounded-full px-3 py-2 text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none placeholder-slate-400"
+                                />
+                                <button 
+                                  onClick={handleSendMessage}
+                                  className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors shadow-md"
+                                >
+                                  <Send className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     )}
 

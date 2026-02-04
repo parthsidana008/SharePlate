@@ -19,6 +19,7 @@ import donationRoutes from './routes/donation.routes.js';
 import requestRoutes from './routes/request.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import userRoutes from './routes/user.routes.js';
+import messageRoutes from './routes/message.routes.js';
 
 // Connect to MongoDB
 connectDB();
@@ -48,6 +49,7 @@ app.use('/api/donations', donationRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/messages', messageRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

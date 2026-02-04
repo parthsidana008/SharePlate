@@ -4,11 +4,14 @@ import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import { getSocket } from '../services/socketService';
 import api from '../utils/api';
+import { saveMessage, getMessages } from '../services/messageService';
 
 const MyRequests = ({ requests }) => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const chatScrollRef = useRef(null);
   const { sendMessage } = useSocket();
   const { user } = useAuth();
@@ -126,6 +129,13 @@ const MyRequests = ({ requests }) => {
     setChatHistory(prev => [...prev, newMessage]);
     setChatMessage('');
     
+    // Save to backend
+    try {
+      await saveMessage(requestId, messageText, donorId.toString());
+    } catch (error) {
+      console.error('Error saving message to backend:', error);
+    }
+    
     // Send via WebSocket
     try {
       const socket = getSocket();
@@ -140,6 +150,33 @@ const MyRequests = ({ requests }) => {
       console.error('Error sending message:', error);
       alert('Failed to send message. Please try again.');
     }
+  };
+
+  const loadChatHistory = async (requestId) => {
+    setLoadingMessages(true);
+    try {
+      const messages = await getMessages(requestId);
+      // Convert backend messages to chat history format
+      const userId = user._id || user.id;
+      const formattedMessages = messages.map(msg => ({
+        sender: msg.sender._id.toString() === userId.toString() ? 'me' : 'them',
+        text: msg.message,
+        time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }));
+      setChatHistory(formattedMessages);
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const toggleChat = () => {
+    if (!isChatOpen && selectedRequest) {
+      const requestId = selectedRequest.id || selectedRequest._id;
+      loadChatHistory(requestId);
+    }
+    setIsChatOpen(!isChatOpen);
   };
 
   return (
@@ -164,7 +201,8 @@ const MyRequests = ({ requests }) => {
                 <div 
                 key={req.id}
                 onClick={() => {
-                  setSelectedRequest(req); 
+                  setSelectedRequest(req);
+                  setIsChatOpen(false);
                   // Reset chat history when selecting a new request
                   setChatHistory([]);
                 }}
@@ -249,11 +287,21 @@ const MyRequests = ({ requests }) => {
                                     <h4 className="font-bold text-green-800 flex items-center justify-center gap-2">
                                         <CheckCircle2 className="w-5 h-5" /> Request Accepted!
                                     </h4>
-                                    <p className="text-green-700 text-sm mt-1">Coordinate the pickup time with the donor.</p>
+                                    <p className="text-green-700 text-sm mt-1">Click the button below to chat with the donor.</p>
                                 </div>
                                 
-                                {/* Integrated Chat */}
-                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[400px]">
+                                {/* Chat Toggle Button */}
+                                <button
+                                  onClick={toggleChat}
+                                  className="w-full max-w-md mx-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 font-medium shadow-md"
+                                >
+                                  <MessageSquare className="w-5 h-5" />
+                                  {isChatOpen ? 'Close Chat' : 'Chat with Donor'}
+                                </button>
+
+                                {/* Integrated Chat - Only shown when isChatOpen is true */}
+                                {isChatOpen && (
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[400px] mt-4">
                                     <div className="bg-slate-900 text-white p-3 flex items-center justify-between flex-shrink-0 rounded-t-xl">
                                         <div className="flex items-center gap-2">
                                             <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center font-bold text-xs">
@@ -267,7 +315,13 @@ const MyRequests = ({ requests }) => {
                                     </div>
                                     
                                     <div className="flex-1 bg-slate-50 p-3 overflow-y-auto space-y-2 min-h-0" ref={chatScrollRef}>
-                                        {chatHistory.length === 0 ? (
+                                        {loadingMessages ? (
+                                            <div className="flex items-center justify-center h-full">
+                                                <div className="text-center text-slate-400">
+                                                    <p className="text-xs">Loading messages...</p>
+                                                </div>
+                                            </div>
+                                        ) : chatHistory.length === 0 ? (
                                             <div className="flex items-center justify-center h-full">
                                                 <div className="text-center text-slate-400">
                                                     <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -305,6 +359,7 @@ const MyRequests = ({ requests }) => {
                                         </div>
                                     </div>
                                 </div>
+                                )}
                             </div>
                         )}
 
@@ -341,4 +396,3 @@ const MyRequests = ({ requests }) => {
 };
 
 export default MyRequests;
-

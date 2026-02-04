@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import DonationCard from '../components/DonationCard';
@@ -14,7 +15,8 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 
 const HomePage = () => {
-  const [currentView, setCurrentView] = useState('home');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [currentView, setCurrentView] = useState(searchParams.get('view') || 'home');
   const [donations, setDonations] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
   const [myDonations, setMyDonations] = useState([]);
@@ -27,6 +29,12 @@ const HomePage = () => {
   const { user } = useAuth();
   const { notifications } = useSocket();
   const donationsSectionRef = useRef(null);
+
+  // Update URL when view changes
+  const changeView = (view) => {
+    setCurrentView(view);
+    setSearchParams({ view });
+  };
 
   // Fetch donations on mount
   useEffect(() => {
@@ -139,7 +147,7 @@ const HomePage = () => {
       if (user?.role === 'donor') {
         await fetchMyDonations();
       }
-      setCurrentView('home');
+      changeView('home');
       showNotification(`Donation posted: ${newDonation.title}`, 'success');
     } catch (error) {
       showNotification(error.response?.data?.message || 'Failed to create donation', 'error');
@@ -264,7 +272,7 @@ const HomePage = () => {
             <Hero
               onCtaClick={() => {
                 if (user?.role === 'donor' || user?.role === 'admin') {
-                  setCurrentView('donate');
+                  changeView('donate');
                 } else {
                   showNotification('Only donors can post donations', 'info');
                 }
@@ -339,7 +347,7 @@ const HomePage = () => {
                         donation={d}
                         onRequest={handleRequestDonation}
                         onEdit={(donation) => {
-                          setCurrentView('edit-donation');
+                          changeView('edit-donation');
                           setEditingDonation(donation);
                         }}
                         onDelete={async (donation) => {
@@ -374,7 +382,7 @@ const HomePage = () => {
         return (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 w-full flex-1 flex flex-col">
             <AddDonation
-              onCancel={() => setCurrentView('home')}
+              onCancel={() => changeView('home')}
               onSubmit={handleAddDonation}
             />
           </div>
@@ -385,7 +393,7 @@ const HomePage = () => {
             <MyDonations 
               donations={myDonations}
               onEdit={(donation) => {
-                setCurrentView('edit-donation');
+                changeView('edit-donation');
                 setEditingDonation(donation);
               }}
               onDelete={(donationId) => handleDeleteDonation(donationId)}
@@ -399,7 +407,7 @@ const HomePage = () => {
             <EditDonation
               donation={editingDonation}
               onCancel={() => {
-                setCurrentView('my-donations');
+                changeView('my-donations');
                 setEditingDonation(null);
               }}
               onSubmit={handleEditDonation}
@@ -453,7 +461,7 @@ const HomePage = () => {
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
       <Navbar
         currentView={currentView}
-        setView={setCurrentView}
+        setView={changeView}
         requestCount={user?.role === 'donor' ? donationRequests.length : myRequests.length}
       />
 
