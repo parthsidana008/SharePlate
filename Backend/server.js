@@ -26,31 +26,38 @@ connectDB();
 
 const app = express();
 
-// Middleware - CORS configuration for deployment
+// CORS configuration - support multiple origins for deployment
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://share-plate-lrbd.vercel.app',
-  process.env.FRONTEND_URL
+  'http://localhost:5173',
+  process.env.FRONTEND_URL,
+  // Add your Vercel domains here
+  'https://shareplate-swmi.vercel.app',
+  'https://shareplate.vercel.app'
 ].filter(Boolean);
 
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.some(allowed => origin.includes('vercel.app'))) {
       callback(null, true);
     } else {
       console.log('CORS blocked origin:', origin);
-      callback(null, true); // Allow anyway for now
+      callback(null, true); // Allow all for now to debug
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Handle preflight requests
+app.options('*', cors());
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Health check route
 app.get('/api/health', (req, res) => {

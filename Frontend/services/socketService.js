@@ -7,7 +7,11 @@ export const initializeSocket = (token) => {
     return socket;
   }
 
-  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  // Get backend URL - remove /api if present since socket connects to root
+  let backendUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+  backendUrl = backendUrl.replace('/api', '');
+
+  console.log('Connecting WebSocket to:', backendUrl);
 
   socket = io(backendUrl, {
     auth: {
@@ -16,7 +20,8 @@ export const initializeSocket = (token) => {
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionDelay: 1000,
-    reconnectionAttempts: 5
+    reconnectionAttempts: 5,
+    withCredentials: true
   });
 
   socket.on('connect', () => {
