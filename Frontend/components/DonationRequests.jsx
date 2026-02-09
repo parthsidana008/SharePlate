@@ -14,8 +14,18 @@ const DonationRequests = ({ requests = [], onUpdate }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const chatScrollRef = useRef(null);
+  const detailPanelRef = useRef(null);
   const { sendMessage } = useSocket();
   const { user } = useAuth();
+
+  // Auto-scroll to detail panel on mobile when a request is selected
+  useEffect(() => {
+    if (selectedRequest && detailPanelRef.current && window.innerWidth < 1024) {
+      setTimeout(() => {
+        detailPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [selectedRequest]);
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -226,7 +236,7 @@ const DonationRequests = ({ requests = [], onUpdate }) => {
         </div>
 
         {/* Detailed View */}
-        <div className="lg:col-span-2">
+        <div ref={detailPanelRef} className="lg:col-span-2">
           {selectedRequest ? (
             <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto">
               <>

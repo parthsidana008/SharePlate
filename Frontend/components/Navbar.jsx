@@ -103,6 +103,19 @@ const Navbar = ({ currentView, setView, requestCount = 0 }) => {
       {isOpen && (
         <div className="md:hidden bg-white border-t border-slate-100">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+            {/* User Profile Section for Mobile */}
+            {user && (
+              <div className="flex items-center gap-3 px-3 py-3 mb-2 bg-slate-50 rounded-lg">
+                <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center text-lg font-bold">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-slate-900">{user.name}</p>
+                  <p className="text-xs text-slate-500 capitalize">{user.role || 'User'}</p>
+                </div>
+              </div>
+            )}
+            
             {navItems.map((item) => (
               <button
                 key={item.id}
@@ -120,6 +133,30 @@ const Navbar = ({ currentView, setView, requestCount = 0 }) => {
                 <span>{item.label}</span>
               </button>
             ))}
+            
+            {/* Logout Button for Mobile */}
+            {user ? (
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsOpen(false);
+                }}
+                className="flex items-center space-x-3 w-full px-3 py-3 rounded-md text-base font-medium text-red-600 hover:bg-red-50 mt-2 border-t border-slate-100 pt-4"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  navigate('/login');
+                  setIsOpen(false);
+                }}
+                className="flex items-center justify-center w-full px-3 py-3 rounded-lg text-base font-medium bg-slate-900 text-white hover:bg-slate-800 mt-2"
+              >
+                Sign In
+              </button>
+            )}
           </div>
         </div>
       )}

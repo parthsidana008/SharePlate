@@ -213,19 +213,21 @@ const AddDonation = ({ onCancel, onSubmit }) => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                     <label className="block text-xs font-bold uppercase text-slate-400 mb-1 tracking-wider">Location</label>
-                    <div className="relative">
-                        <input
-                            required
-                            type="text"
-                            value={location}
-                            onChange={(e) => setLocation(e.target.value)}
-                            placeholder="City or Area"
-                            className="block w-full bg-slate-50 border-none rounded-lg py-2.5 px-3 pl-9 pr-24 text-sm text-slate-900 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
-                        />
-                        <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <div className="flex flex-col gap-2">
+                        <div className="relative">
+                            <input
+                                required
+                                type="text"
+                                value={location}
+                                onChange={(e) => setLocation(e.target.value)}
+                                placeholder="City or Area"
+                                className="block w-full bg-slate-50 border-none rounded-lg py-2.5 px-3 pl-9 text-sm text-slate-900 focus:ring-2 focus:ring-green-100 placeholder-slate-400"
+                            />
+                            <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                        </div>
                         <button
                             type="button"
                             onClick={async () => {
@@ -237,9 +239,10 @@ const AddDonation = ({ onCancel, onSubmit }) => {
                                     alert(error.message || 'Unable to detect location');
                                 }
                             }}
-                            className="absolute right-2 top-1.5 px-2 py-1 bg-green-100 hover:bg-green-200 text-xs font-medium text-green-700 rounded-md transition-colors"
+                            className="w-full sm:w-auto px-3 py-2 bg-green-100 hover:bg-green-200 text-xs font-medium text-green-700 rounded-md transition-colors flex items-center justify-center gap-1"
                         >
-                            Auto Detect
+                            <MapPin className="w-3 h-3" />
+                            Auto Detect Location
                         </button>
                     </div>
                 </div>

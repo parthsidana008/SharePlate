@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Edit2, Trash2, MapPin, Clock, Users, Utensils, Package } from 'lucide-react';
 import api from '../utils/api';
 
@@ -7,6 +7,16 @@ const MyDonations = ({ donations, onEdit, onDelete, onRefresh }) => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [loading, setLoading] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+  const detailPanelRef = useRef(null);
+
+  // Auto-scroll to detail panel on mobile when a donation is selected
+  useEffect(() => {
+    if (selectedDonation && detailPanelRef.current && window.innerWidth < 1024) {
+      setTimeout(() => {
+        detailPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [selectedDonation]);
 
   const getTypeColor = (type) => {
     switch (type) {
@@ -114,9 +124,9 @@ const MyDonations = ({ donations, onEdit, onDelete, onRefresh }) => {
         </div>
 
         {/* Detailed View */}
-        <div className="lg:col-span-2">
+        <div ref={detailPanelRef} className="lg:col-span-2">
           {selectedDonation ? (
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden lg:max-h-[calc(100vh-200px)] overflow-y-auto">
               {/* Header with Image */}
               <div className="relative h-64 overflow-hidden bg-slate-200">
                 <img
