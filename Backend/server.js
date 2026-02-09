@@ -32,6 +32,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   process.env.FRONTEND_URL,
   // Add your Vercel domains here
+  'https://share-plate-aaiw.vercel.app',
   'https://shareplate-swmi.vercel.app',
   'https://shareplate.vercel.app'
 ].filter(Boolean);

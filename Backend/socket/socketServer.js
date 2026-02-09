@@ -7,6 +7,7 @@ export const initializeSocket = (httpServer) => {
     'http://localhost:3000',
     'http://localhost:5173',
     process.env.FRONTEND_URL,
+    'https://share-plate-aaiw.vercel.app',
     'https://shareplate-swmi.vercel.app',
     'https://shareplate.vercel.app'
   ].filter(Boolean);
