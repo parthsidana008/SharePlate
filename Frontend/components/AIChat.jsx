@@ -1,19 +1,57 @@
 import { useState, useEffect, useRef } from 'react';
 import { chatWithAssistant } from '../services/geminiService';
-import { Send, User, Bot, Loader2 } from 'lucide-react';
+import { Send, User, Bot, Loader2, Trash2 } from 'lucide-react';
 
-const AIChat = ({ donations }) => {
-  const [messages, setMessages] = useState([
+const STORAGE_KEY = 'shareplate_chat_history';
+
+const getInitialMessages = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Convert timestamp strings back to Date objects
+      return parsed.map(msg => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp)
+      }));
+    }
+  } catch (e) {
+    console.error('Error loading chat history:', e);
+  }
+  return [
     {
       id: '1',
       role: 'model',
       text: "Hi! I'm PlateBot. How can I help you today? Ask me about donating safely or finding food nearby.",
       timestamp: new Date()
     }
-  ]);
+  ];
+};
+
+const AIChat = ({ donations }) => {
+  const [messages, setMessages] = useState(getInitialMessages);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch (e) {
+      console.error('Error saving chat history:', e);
+    }
+  }, [messages]);
+
+  const clearChat = () => {
+    const initialMsg = {
+      id: '1',
+      role: 'model',
+      text: "Hi! I'm PlateBot. How can I help you today? Ask me about donating safely or finding food nearby.",
+      timestamp: new Date()
+    };
+    setMessages([initialMsg]);
+  };
 
   const scrollToBottom = () => {
     // Use 'nearest' block to prevent aggressive window scrolling if the element is already visible in the container
@@ -63,14 +101,23 @@ const AIChat = ({ donations }) => {
 
   return (
     <div className="max-w-4xl w-full mx-auto flex-1 flex flex-col bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden my-4 h-full">
-      <div className="bg-indigo-600 p-4 text-white flex items-center gap-3">
-        <div className="bg-white/20 p-2 rounded-full">
-            <Bot className="w-6 h-6" />
+      <div className="bg-indigo-600 p-4 text-white flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="bg-white/20 p-2 rounded-full">
+              <Bot className="w-6 h-6" />
+          </div>
+          <div>
+              <h2 className="font-bold">SharePlate Support</h2>
+              <p className="text-indigo-200 text-xs">Always here to help.</p>
+          </div>
         </div>
-        <div>
-            <h2 className="font-bold">SharePlate Support</h2>
-            <p className="text-indigo-200 text-xs">Always here to help.</p>
-        </div>
+        <button
+          onClick={clearChat}
+          className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-colors"
+          title="Clear chat history"
+        >
+          <Trash2 className="w-5 h-5" />
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">

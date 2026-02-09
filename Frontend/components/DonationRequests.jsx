@@ -176,17 +176,17 @@ const DonationRequests = ({ requests = [], onUpdate }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-8 flex-shrink-0">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-3xl font-bold text-slate-900">Donation Requests</h2>
           <p className="text-slate-500 mt-1">Manage requests from recipients for your donations</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Request List */}
-        <div className="lg:col-span-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
+        <div className="lg:col-span-1 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
           {requests.length === 0 ? (
             <div className="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300">
               <Package className="w-10 h-10 text-slate-300 mx-auto mb-2" />
@@ -226,9 +226,9 @@ const DonationRequests = ({ requests = [], onUpdate }) => {
         </div>
 
         {/* Detailed View */}
-        <div className="lg:col-span-2 h-full">
+        <div className="lg:col-span-2">
           {selectedRequest ? (
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden h-full flex flex-col relative">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto">
               <>
                   {/* Header */}
                   <div className="bg-slate-900 text-white p-6 flex-shrink-0">
@@ -297,14 +297,27 @@ const DonationRequests = ({ requests = [], onUpdate }) => {
                           <p className="text-green-700 text-sm mt-1">Click the button below to chat with the recipient.</p>
                         </div>
                         
-                        {/* Chat Toggle Button */}
-                        <button
-                          onClick={toggleChat}
-                          className="w-full max-w-md mx-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 font-medium shadow-md"
-                        >
-                          <MessageSquare className="w-5 h-5" />
-                          {isChatOpen ? 'Close Chat' : 'Chat with Recipient'}
-                        </button>
+                        {/* Action Buttons */}
+                        <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto mb-4">
+                          {/* Chat Toggle Button */}
+                          <button
+                            onClick={toggleChat}
+                            className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 font-medium shadow-md"
+                          >
+                            <MessageSquare className="w-5 h-5" />
+                            {isChatOpen ? 'Close Chat' : 'Chat with Recipient'}
+                          </button>
+                          
+                          {/* Cancel Button */}
+                          <button
+                            onClick={() => updateStatus(selectedRequest._id || selectedRequest.id || selectedRequest.raw?._id || selectedRequest.raw?.id, 'Cancelled')}
+                            disabled={loadingIds.includes(selectedRequest._id || selectedRequest.id || selectedRequest.raw?._id || selectedRequest.raw?.id)}
+                            className="px-6 py-3 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                          >
+                            <X className="w-5 h-5" />
+                            Cancel Donation
+                          </button>
+                        </div>
 
                         {/* Integrated Chat - Only shown when isChatOpen is true */}
                         {isChatOpen && (
@@ -401,11 +414,21 @@ const DonationRequests = ({ requests = [], onUpdate }) => {
                         <p className="text-slate-500">The recipient has successfully collected the donation. Thank you for making a difference!</p>
                       </div>
                     )}
+
+                    {(selectedRequest.status === 'Cancelled' || selectedRequest.raw?.status === 'Cancelled') && (
+                      <div className="max-w-md">
+                        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                          <X className="w-10 h-10 text-red-600" />
+                        </div>
+                        <h4 className="text-xl font-bold text-slate-900 mb-2">Donation Cancelled</h4>
+                        <p className="text-slate-500">This donation request has been cancelled.</p>
+                      </div>
+                    )}
                   </div>
                 </>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-slate-400">
+            <div className="h-full flex flex-col items-center justify-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-slate-400 min-h-[400px]">
               <Package className="w-16 h-16 mb-4 opacity-50" />
               <p className="text-lg font-medium">Select a request to view details</p>
             </div>

@@ -13,6 +13,56 @@ const getGeminiClient = () => {
   return genAI;
 };
 
+// @desc    Check AI service status
+// @route   GET /api/ai/status
+// @access  Private
+export const checkAIStatus = async (req, res) => {
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          status: 'error',
+          message: 'GEMINI_API_KEY is not configured',
+          apiKeyConfigured: false
+        }
+      });
+    }
+
+    const model = getGeminiClient().getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const result = await model.generateContent('Say "OK" in one word');
+    const response = await result.response;
+    const text = response.text();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        status: 'operational',
+        message: 'Gemini AI is working properly',
+        apiKeyConfigured: true,
+        testResponse: text.trim()
+      }
+    });
+  } catch (error) {
+    const errorMessage = error.message || 'Unknown error';
+    const isQuotaError = errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('Too Many Requests');
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        status: 'error',
+        message: isQuotaError 
+          ? 'API quota exceeded. Please check your Google AI billing or wait for quota reset.'
+          : `AI service error: ${errorMessage}`,
+        apiKeyConfigured: true,
+        isQuotaError,
+        fullError: errorMessage
+      }
+    });
+  }
+};
+
 // @desc    Get food safety tips
 // @route   POST /api/ai/safety-tips
 // @access  Private
@@ -27,7 +77,7 @@ export const getFoodSafetyTips = async (req, res) => {
       });
     }
 
-    const model = getGeminiClient().getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = getGeminiClient().getGenerativeModel({ model: 'gemini-2.5-flash' });
     
     const prompt = `You are a food safety expert. Provide 3 concise, bulleted food safety tips for donating or storing: ${foodItem}. Keep tips practical and short.`;
 
@@ -42,7 +92,8 @@ export const getFoodSafetyTips = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Gemini Error:', error);
+    console.error('Gemini Error:', error.message);
+    console.error('Full error:', JSON.stringify(error, null, 2));
     // Silent fallback
     res.status(200).json({
       success: true,
@@ -67,9 +118,9 @@ export const analyzeFoodImage = async (req, res) => {
       });
     }
 
-    // Use Gemini 2.0 Flash for image analysis
+    // Use Gemini 2.5 Flash for image analysis
     const model = getGeminiClient().getGenerativeModel({ 
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         responseMimeType: 'application/json'
       }
@@ -143,7 +194,7 @@ export const chatWithAssistant = async (req, res) => {
     }
 
     const model = getGeminiClient().getGenerativeModel({ 
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.5-flash',
       systemInstruction: `You are 'PlateBot', a helpful assistant for a food donation platform called SharePlate.
     
 ${donationsContext ? `Here is the current list of available live donations on the platform:\n${donationsContext}\n\nWhen a user asks to find food, check for donations, or searches for a location (like a zip code, city, or area), ONLY use the list above.` : ''}
@@ -151,7 +202,8 @@ ${donationsContext ? `Here is the current list of available live donations on th
 Be concise, friendly, and helpful.`
     });
 
-    const chatHistory = history.map(msg => {
+    // Process and validate chat history - must start with 'user' role
+    let chatHistory = history.map(msg => {
       const role = msg.role === 'user' ? 'user' : 'model';
       const text = msg.text || msg.parts?.[0]?.text || '';
       return {
@@ -159,6 +211,14 @@ Be concise, friendly, and helpful.`
         parts: [{ text }]
       };
     }).filter(msg => msg.parts[0].text);
+    
+    // Ensure history starts with 'user' role (Gemini requirement)
+    if (chatHistory.length > 0 && chatHistory[0].role !== 'user') {
+      // Remove leading model messages
+      while (chatHistory.length > 0 && chatHistory[0].role !== 'user') {
+        chatHistory.shift();
+      }
+    }
     
     const chat = model.startChat({
       history: chatHistory

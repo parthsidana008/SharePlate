@@ -56,7 +56,7 @@ const MyDonations = ({ donations, onEdit, onDelete, onRefresh }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-full flex flex-col">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-3xl font-bold text-slate-900">My Donations</h2>
@@ -64,9 +64,9 @@ const MyDonations = ({ donations, onEdit, onDelete, onRefresh }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Donation List */}
-        <div className="lg:col-span-1 space-y-4 overflow-y-auto pr-2">
+        <div className="lg:col-span-1 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
           {donations.length === 0 ? (
             <div className="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300">
               <Package className="w-10 h-10 text-slate-300 mx-auto mb-2" />
@@ -116,7 +116,7 @@ const MyDonations = ({ donations, onEdit, onDelete, onRefresh }) => {
         {/* Detailed View */}
         <div className="lg:col-span-2">
           {selectedDonation ? (
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden h-full flex flex-col">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto">
               {/* Header with Image */}
               <div className="relative h-64 overflow-hidden bg-slate-200">
                 <img

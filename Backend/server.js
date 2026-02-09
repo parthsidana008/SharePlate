@@ -82,5 +82,6 @@ httpServer.listen(PORT, () => {
   console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 API URL: http://localhost:${PORT}`);
   console.log(`🔌 WebSocket server initialized`);
+  console.log(`🤖 Gemini API Key: ${process.env.GEMINI_API_KEY ? '✅ Configured' : '❌ Missing'}`);
 });
 

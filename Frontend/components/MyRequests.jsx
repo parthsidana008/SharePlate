@@ -1,20 +1,44 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, CheckCircle2, Clock, Package, MapPin, X, Send, ChevronRight, Phone } from 'lucide-react';
+import { MessageSquare, CheckCircle2, Clock, Package, MapPin, X, Send, ChevronRight, Phone, XCircle } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import { getSocket } from '../services/socketService';
 import api from '../utils/api';
 import { saveMessage, getMessages } from '../services/messageService';
 
-const MyRequests = ({ requests }) => {
+const MyRequests = ({ requests, onUpdate }) => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const chatScrollRef = useRef(null);
   const { sendMessage } = useSocket();
   const { user } = useAuth();
+
+  const handleCancelRequest = async () => {
+    if (!selectedRequest) return;
+    const requestId = selectedRequest.id || selectedRequest._id;
+    
+    if (!confirm('Are you sure you want to cancel this request?')) return;
+    
+    try {
+      setCancelLoading(true);
+      await api.put(`/requests/${requestId}/status`, { status: 'Cancelled' });
+      
+      // Update local state
+      setSelectedRequest(prev => ({ ...prev, status: 'Cancelled' }));
+      
+      // Notify parent component
+      if (onUpdate) onUpdate(requestId, 'Cancelled');
+    } catch (error) {
+      console.error('Error cancelling request:', error);
+      alert(error.response?.data?.message || 'Failed to cancel request');
+    } finally {
+      setCancelLoading(false);
+    }
+  };
 
   useEffect(() => {
       if(chatScrollRef.current) {
@@ -38,6 +62,7 @@ const MyRequests = ({ requests }) => {
         case 'Confirmed': return 'text-blue-500 bg-blue-50 border-blue-200';
         case 'Ready for Pickup': return 'text-indigo-500 bg-indigo-50 border-indigo-200';
         case 'Completed': return 'text-green-500 bg-green-50 border-green-200';
+        case 'Cancelled': return 'text-red-500 bg-red-50 border-red-200';
         default: return 'text-slate-500';
       }
   };
@@ -180,17 +205,17 @@ const MyRequests = ({ requests }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-full flex flex-col flex-1 w-full">
-      <div className="flex items-center justify-between mb-8 flex-shrink-0">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex items-center justify-between mb-8">
         <div>
             <h2 className="text-3xl font-bold text-slate-900">My Requests</h2>
             <p className="text-slate-500 mt-1">Track the status of your donation requests</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Request List */}
-        <div className="lg:col-span-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
+        <div className="lg:col-span-1 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
           {requests.length === 0 ? (
               <div className="text-center py-10 bg-white rounded-xl border border-dashed border-slate-300">
                   <Package className="w-10 h-10 text-slate-300 mx-auto mb-2" />
@@ -223,9 +248,9 @@ const MyRequests = ({ requests }) => {
         </div>
 
         {/* Detailed View */}
-        <div className="lg:col-span-2 h-full">
+        <div className="lg:col-span-2">
             {selectedRequest ? (
-                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden h-full flex flex-col relative">
+                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden max-h-[calc(100vh-200px)] overflow-y-auto">
                     {/* Status Header */}
                     <div className="bg-slate-900 text-white p-6 flex-shrink-0">
                         <div className="flex justify-between items-start">
@@ -277,7 +302,15 @@ const MyRequests = ({ requests }) => {
                              <div className="max-w-md">
                                  <Clock className="w-16 h-16 text-amber-400 mx-auto mb-4" />
                                  <h4 className="text-xl font-bold text-slate-900 mb-2">Waiting for Confirmation</h4>
-                                 <p className="text-slate-500">The donor has received your request. You will be notified once they confirm the availability.</p>
+                                 <p className="text-slate-500 mb-6">The donor has received your request. You will be notified once they confirm the availability.</p>
+                                 <button
+                                   onClick={handleCancelRequest}
+                                   disabled={cancelLoading}
+                                   className="px-6 py-3 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors flex items-center justify-center gap-2 mx-auto disabled:opacity-60"
+                                 >
+                                   <XCircle className="w-5 h-5" />
+                                   {cancelLoading ? 'Cancelling...' : 'Cancel Request'}
+                                 </button>
                              </div>
                         )}
 
@@ -290,14 +323,27 @@ const MyRequests = ({ requests }) => {
                                     <p className="text-green-700 text-sm mt-1">Click the button below to chat with the donor.</p>
                                 </div>
                                 
-                                {/* Chat Toggle Button */}
-                                <button
-                                  onClick={toggleChat}
-                                  className="w-full max-w-md mx-auto px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 font-medium shadow-md"
-                                >
-                                  <MessageSquare className="w-5 h-5" />
-                                  {isChatOpen ? 'Close Chat' : 'Chat with Donor'}
-                                </button>
+                                {/* Action Buttons */}
+                                <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto mb-4">
+                                  {/* Chat Toggle Button */}
+                                  <button
+                                    onClick={toggleChat}
+                                    className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 font-medium shadow-md"
+                                  >
+                                    <MessageSquare className="w-5 h-5" />
+                                    {isChatOpen ? 'Close Chat' : 'Chat with Donor'}
+                                  </button>
+                                  
+                                  {/* Cancel Button */}
+                                  <button
+                                    onClick={handleCancelRequest}
+                                    disabled={cancelLoading}
+                                    className="px-6 py-3 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                                  >
+                                    <XCircle className="w-5 h-5" />
+                                    {cancelLoading ? 'Cancelling...' : 'Cancel'}
+                                  </button>
+                                </div>
 
                                 {/* Integrated Chat - Only shown when isChatOpen is true */}
                                 {isChatOpen && (
@@ -373,8 +419,18 @@ const MyRequests = ({ requests }) => {
                             </div>
                         )}
 
+                        {selectedRequest.status === 'Cancelled' && (
+                            <div className="max-w-md">
+                                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <XCircle className="w-10 h-10 text-red-600" />
+                                </div>
+                                <h4 className="text-xl font-bold text-slate-900 mb-2">Request Cancelled</h4>
+                                <p className="text-slate-500">This request has been cancelled.</p>
+                            </div>
+                        )}
+
                         {/* Fallback when status doesn't match known values */}
-                        {![ 'Pending', 'Confirmed', 'Ready for Pickup', 'Completed' ].includes(selectedRequest.status) && (
+                        {![ 'Pending', 'Confirmed', 'Ready for Pickup', 'Completed', 'Cancelled' ].includes(selectedRequest.status) && (
                             <div className="max-w-md">
                                 <h4 className="text-lg font-bold text-slate-900 mb-2">Request Status</h4>
                                 <p className="text-slate-500">Status: {selectedRequest.status || 'Unknown'}</p>
