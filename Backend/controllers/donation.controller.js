@@ -4,6 +4,7 @@ import Donation from '../models/Donation.model.js';
 // @route   GET /api/donations
 // @access  Private
 export const getDonations = async (req, res) => {
+  const startTime = Date.now();
   try {
     const { type, location, status } = req.query;
     
@@ -19,11 +20,15 @@ export const getDonations = async (req, res) => {
       ];
     }
 
+    console.log(`[getDonations] Query started at ${new Date().toISOString()}`);
+    
     const donations = await Donation.find(query)
       .populate('donor', 'name email verified')
       .sort({ createdAt: -1 })
       .limit(50)
       .lean();
+
+    console.log(`[getDonations] Query completed in ${Date.now() - startTime}ms, found ${donations.length} donations`);
 
     res.status(200).json({
       success: true,
@@ -33,6 +38,7 @@ export const getDonations = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error(`[getDonations] Error after ${Date.now() - startTime}ms:`, error.message);
     res.status(500).json({
       success: false,
       message: error.message || 'Error fetching donations'
