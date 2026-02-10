@@ -15,7 +15,7 @@ const api = axios.create({
     'Content-Type': 'application/json'
   },
   withCredentials: true,
-  timeout: 120000 // 2 minute timeout for slow free tier DBs
+  timeout: 30000 // 30 second timeout
 });
 
 // Add token to requests

@@ -20,9 +20,8 @@ export const getDonations = async (req, res) => {
     }
 
     const donations = await Donation.find(query)
-      .sort({ createdAt: -1 })
-      .limit(30)
-      .lean();
+      .populate('donor', 'name email verified')
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -32,7 +31,6 @@ export const getDonations = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('getDonations error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Error fetching donations'
@@ -203,9 +201,7 @@ export const deleteDonation = async (req, res) => {
 export const getMyDonations = async (req, res) => {
   try {
     const donations = await Donation.find({ donor: req.user.id })
-      .sort({ createdAt: -1 })
-      .limit(30)
-      .lean();
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
