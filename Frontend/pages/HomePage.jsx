@@ -26,6 +26,7 @@ const HomePage = () => {
   const [notification, setNotification] = useState(null);
   const [editingDonation, setEditingDonation] = useState(null);
   const [requestedDonations, setRequestedDonations] = useState(new Set());
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const { notifications } = useSocket();
   const donationsSectionRef = useRef(null);
@@ -36,23 +37,35 @@ const HomePage = () => {
     setSearchParams({ view });
   };
 
-  // Fetch donations on mount
+  // Fetch donations on mount - with caching for instant display
   useEffect(() => {
     const loadData = async () => {
-      try {
-        // Load data in parallel but don't block UI rendering
-        await Promise.all([
-          fetchDonations(),
-          fetchMyRequests(),
-          user?.role === 'donor' ? Promise.all([fetchMyDonations(), fetchDonationRequests()]) : Promise.resolve()
-        ]);
-      } catch (error) {
-        console.error('Error loading data:', error);
+      if (!user) return;
+      
+      // Show cached donations immediately for instant perceived performance
+      const cachedDonations = sessionStorage.getItem('donations_cache');
+      const cacheTime = sessionStorage.getItem('donations_cache_time');
+      const CACHE_MAX_AGE = 60000; // 1 minute cache
+      
+      if (cachedDonations && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_MAX_AGE) {
+        setDonations(JSON.parse(cachedDonations));
+        setIsLoading(false);
+        // Still fetch fresh data in background
+        fetchDonations(true);
+      } else {
+        setIsLoading(true);
+        await fetchDonations();
+        setIsLoading(false);
+      }
+      
+      // Fetch other data in background (non-blocking)
+      fetchMyRequests();
+      if (user?.role === 'donor') {
+        fetchMyDonations();
+        fetchDonationRequests();
       }
     };
-    if (user) {
-      loadData();
-    }
+    loadData();
   }, [user?.role]);
 
   // Listen to WebSocket notifications
@@ -76,13 +89,20 @@ const HomePage = () => {
     }
   }, [notifications]);
 
-  const fetchDonations = async () => {
+  const fetchDonations = async (isBackground = false) => {
     try {
       const response = await api.get('/donations');
-      setDonations(response.data.data.donations || []);
+      const newDonations = response.data.data.donations || [];
+      setDonations(newDonations);
+      
+      // Cache donations for instant display on reload
+      sessionStorage.setItem('donations_cache', JSON.stringify(newDonations));
+      sessionStorage.setItem('donations_cache_time', Date.now().toString());
     } catch (error) {
       console.error('Error fetching donations:', error);
-      showNotification('Failed to load donations', 'error');
+      if (!isBackground) {
+        showNotification('Failed to load donations', 'error');
+      }
     }
   };
 
@@ -336,7 +356,17 @@ const HomePage = () => {
                 </div>
               </div>
 
-              {filteredDonations.length > 0 ? (
+              {isLoading ? (
+                <div className="text-center py-20 bg-white rounded-xl border border-slate-200">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                    <svg className="w-8 h-8 text-green-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                  <p className="text-slate-600 font-medium">Loading donations...</p>
+                </div>
+              ) : filteredDonations.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filteredDonations.map((d) => {
                     const isMyDonation = user?.role === 'donor' && myDonations.some(md => (md._id || md.id) === (d._id || d.id));
