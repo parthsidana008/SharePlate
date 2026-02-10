@@ -23,9 +23,9 @@ export const getDonations = async (req, res) => {
     console.log(`[getDonations] Query started at ${new Date().toISOString()}`);
     
     const donations = await Donation.find(query)
-      .populate('donor', 'name email verified')
+      .select('title description quantity type location expiresIn imageUrl donorName status createdAt')
       .sort({ createdAt: -1 })
-      .limit(50)
+      .limit(20)
       .lean();
 
     console.log(`[getDonations] Query completed in ${Date.now() - startTime}ms, found ${donations.length} donations`);
