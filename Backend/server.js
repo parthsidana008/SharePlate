@@ -61,12 +61,25 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Health check route
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     message: 'SharePlate API is running',
     timestamp: new Date().toISOString()
   });
+});
+
+// Debug: Test donation count without auth
+app.get('/api/debug/donations', async (req, res) => {
+  try {
+    const Donation = (await import('./models/Donation.model.js')).default;
+    const start = Date.now();
+    const count = await Donation.countDocuments();
+    const time = Date.now() - start;
+    res.json({ count, queryTime: `${time}ms` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // API Routes
