@@ -21,7 +21,9 @@ export const getDonations = async (req, res) => {
 
     const donations = await Donation.find(query)
       .populate('donor', 'name email verified')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
 
     res.status(200).json({
       success: true,
@@ -201,7 +203,9 @@ export const deleteDonation = async (req, res) => {
 export const getMyDonations = async (req, res) => {
   try {
     const donations = await Donation.find({ donor: req.user.id })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
 
     res.status(200).json({
       success: true,
