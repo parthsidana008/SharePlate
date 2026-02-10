@@ -75,8 +75,13 @@ app.get('/api/debug/donations', async (req, res) => {
     const Donation = (await import('./models/Donation.model.js')).default;
     const start = Date.now();
     const count = await Donation.countDocuments();
-    const time = Date.now() - start;
-    res.json({ count, queryTime: `${time}ms` });
+    const countTime = Date.now() - start;
+    
+    const start2 = Date.now();
+    const donations = await Donation.find().select('title status').limit(5).lean();
+    const findTime = Date.now() - start2;
+    
+    res.json({ count, countTime: `${countTime}ms`, findTime: `${findTime}ms`, sample: donations.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
