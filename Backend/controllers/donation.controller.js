@@ -20,7 +20,6 @@ export const getDonations = async (req, res) => {
     }
 
     const donations = await Donation.find(query)
-      .populate('donor', 'name email verified')
       .sort({ createdAt: -1 })
       .limit(30)
       .lean();
@@ -33,6 +32,7 @@ export const getDonations = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('getDonations error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Error fetching donations'
