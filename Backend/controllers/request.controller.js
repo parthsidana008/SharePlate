@@ -85,9 +85,7 @@ export const getMyRequests = async (req, res) => {
           select: '_id name email'
         }
       })
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -115,9 +113,7 @@ export const getDonationRequests = async (req, res) => {
     const requests = await Request.find({ donation: { $in: donationIds } })
       .populate('donation', 'title imageUrl')
       .populate('recipient', 'name email phone location')
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,

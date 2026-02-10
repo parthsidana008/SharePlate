@@ -39,12 +39,6 @@ const requestSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Add indexes for faster queries
-requestSchema.index({ donation: 1 });
-requestSchema.index({ recipient: 1 });
-requestSchema.index({ status: 1 });
-requestSchema.index({ createdAt: -1 });
-
 const Request = mongoose.model('Request', requestSchema);
 
 export default Request;

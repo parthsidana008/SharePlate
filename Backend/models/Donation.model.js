@@ -71,12 +71,6 @@ const donationSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Add indexes for faster queries
-donationSchema.index({ donor: 1 });
-donationSchema.index({ createdAt: -1 });
-donationSchema.index({ status: 1 });
-donationSchema.index({ type: 1 });
-
 const Donation = mongoose.model('Donation', donationSchema);
 
 export default Donation;

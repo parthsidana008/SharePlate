@@ -4,7 +4,6 @@ import Donation from '../models/Donation.model.js';
 // @route   GET /api/donations
 // @access  Private
 export const getDonations = async (req, res) => {
-  const startTime = Date.now();
   try {
     const { type, location, status } = req.query;
     
@@ -20,15 +19,9 @@ export const getDonations = async (req, res) => {
       ];
     }
 
-    console.log(`[getDonations] Query started at ${new Date().toISOString()}`);
-    
     const donations = await Donation.find(query)
-      .select('title description quantity type location expiresIn imageUrl donorName status createdAt')
-      .sort({ createdAt: -1 })
-      .limit(20)
-      .lean();
-
-    console.log(`[getDonations] Query completed in ${Date.now() - startTime}ms, found ${donations.length} donations`);
+      .populate('donor', 'name email verified')
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -38,7 +31,6 @@ export const getDonations = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(`[getDonations] Error after ${Date.now() - startTime}ms:`, error.message);
     res.status(500).json({
       success: false,
       message: error.message || 'Error fetching donations'
@@ -209,9 +201,7 @@ export const deleteDonation = async (req, res) => {
 export const getMyDonations = async (req, res) => {
   try {
     const donations = await Donation.find({ donor: req.user.id })
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
