@@ -11,12 +11,9 @@ const connectDB = async () => {
 
   try {
     const conn = await mongoose.connect(mongoURI, {
-      // Optimized connection settings for faster responses
-      maxPoolSize: 10,           // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-      socketTimeoutMS: 45000,    // Close sockets after 45s of inactivity
-      bufferCommands: false,     // Disable buffering for faster error detection
-      heartbeatFrequencyMS: 10000, // Check server health every 10s
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
     });
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
