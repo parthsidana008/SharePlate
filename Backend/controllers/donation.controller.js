@@ -13,7 +13,7 @@ export const getDonations = async (req, res) => {
     if (status) query.status = status;
     if (location) {
       query.$or = [
-        { 'location.city': new RegExp(location, 'i') },
+        { 'location.city': new RegExp(location, 'i') }, 
         { 'location.area': new RegExp(location, 'i') },
         { 'location.zipCode': location }
       ];

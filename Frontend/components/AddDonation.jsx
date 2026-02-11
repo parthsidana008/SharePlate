@@ -15,6 +15,7 @@ const AddDonation = ({ onCancel, onSubmit }) => {
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [safetyTip, setSafetyTip] = useState(null);
   const [isGettingTip, setIsGettingTip] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSafetyCheck = async () => {
     if (!title) return;
@@ -60,20 +61,27 @@ const AddDonation = ({ onCancel, onSubmit }) => {
       setIsAnalyzingImage(false);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit({
-      title,
-      description,
-      type,
-      quantity,
-      location: {
-        area: location
-      },
-      expiresIn,
-      imageUrl: uploadedImage || `https://picsum.photos/400/300?random=${Math.floor(Math.random() * 1000)}`,
-      donorName: 'Current User'
-    });
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        title,
+        description,
+        type,
+        quantity,
+        location: {
+          area: location
+        },
+        expiresIn,
+        imageUrl: uploadedImage || `https://picsum.photos/400/300?random=${Math.floor(Math.random() * 1000)}`,
+        donorName: 'Current User'
+      });
+    } catch (error) {
+      console.error('Error posting donation:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -269,9 +277,17 @@ const AddDonation = ({ onCancel, onSubmit }) => {
             </button>
             <button
                 type="submit"
-                className="px-8 py-2.5 bg-slate-900 text-white rounded-xl shadow-lg shadow-slate-900/20 text-sm font-semibold hover:bg-slate-800 hover:-translate-y-0.5 transition-all"
+                disabled={isSubmitting}
+                className={`px-8 py-2.5 bg-slate-900 text-white rounded-xl shadow-lg shadow-slate-900/20 text-sm font-semibold transition-all flex items-center gap-2 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-800 hover:-translate-y-0.5'}`}
             >
-                Post Donation
+                {isSubmitting ? (
+                    <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Posting...
+                    </>
+                ) : (
+                    'Post Donation'
+                )}
             </button>
             </div>
         </form>
