@@ -27,6 +27,7 @@ const HomePage = () => {
   const [editingDonation, setEditingDonation] = useState(null);
   const [requestedDonations, setRequestedDonations] = useState(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const [viewedRequests, setViewedRequests] = useState(new Set());
   const { user } = useAuth();
   const { notifications } = useSocket();
   const donationsSectionRef = useRef(null);
@@ -35,12 +36,28 @@ const HomePage = () => {
   const changeView = (view) => {
     setCurrentView(view);
     setSearchParams({ view });
+    
+    // Mark requests as viewed when user visits the requests section
+    if (view === 'requests' || view === 'donation-requests') {
+      markRequestsAsViewed();
+    }
   };
 
   // Fetch donations on mount - with caching for instant display
   useEffect(() => {
     const loadData = async () => {
       if (!user) return;
+      
+      // Load viewed requests from localStorage
+      const storageKey = `viewed_requests_${user.id || user._id}`;
+      const storedViewed = localStorage.getItem(storageKey);
+      if (storedViewed) {
+        try {
+          setViewedRequests(new Set(JSON.parse(storedViewed)));
+        } catch (e) {
+          console.error('Error loading viewed requests:', e);
+        }
+      }
       
       // Show cached donations immediately for instant perceived performance
       const cachedDonations = sessionStorage.getItem('donations_cache');
@@ -229,6 +246,30 @@ const HomePage = () => {
   const showNotification = (message, type) => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
+  };
+
+  const markRequestsAsViewed = () => {
+    if (!user) return;
+    
+    const currentRequests = user?.role === 'donor' ? donationRequests : myRequests;
+    const requestIds = currentRequests.map(r => r._id || r.id);
+    
+    const newViewedRequests = new Set([...viewedRequests, ...requestIds]);
+    setViewedRequests(newViewedRequests);
+    
+    // Persist to localStorage
+    const storageKey = `viewed_requests_${user.id || user._id}`;
+    localStorage.setItem(storageKey, JSON.stringify([...newViewedRequests]));
+  };
+
+  // Calculate unread request count
+  const getUnreadRequestCount = () => {
+    const currentRequests = user?.role === 'donor' ? donationRequests : myRequests;
+    const unreadRequests = currentRequests.filter(r => {
+      const requestId = r._id || r.id;
+      return !viewedRequests.has(requestId);
+    });
+    return unreadRequests.length;
   };
 
   const handleDetectLocation = async () => {
@@ -492,7 +533,7 @@ const HomePage = () => {
       <Navbar
         currentView={currentView}
         setView={changeView}
-        requestCount={user?.role === 'donor' ? donationRequests.length : myRequests.length}
+        requestCount={getUnreadRequestCount()}
       />
 
       {/* Toast Notification */}
