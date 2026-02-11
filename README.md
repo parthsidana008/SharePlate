@@ -213,6 +213,6 @@ MIT License - Free to use and modify
 
 **Made with ❤️ to combat food waste**
 
-[⭐ Star this repo](https://github.com/yourusername/shareplate) • [Live Demo]()
+[⭐ Star this repo](https://github.com/yourusername/shareplate) • [Live Demo](s)
 
 </div>
