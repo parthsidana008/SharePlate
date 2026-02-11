@@ -76,10 +76,10 @@ const HomePage = () => {
       }
       
       // Fetch other data in background (non-blocking)
-      fetchMyRequests();
+      fetchMyRequests(true); // Mark as initial load
       if (user?.role === 'donor') {
         fetchMyDonations();
-        fetchDonationRequests();
+        fetchDonationRequests(true); // Mark as initial load
       }
     };
     loadData();
@@ -123,7 +123,7 @@ const HomePage = () => {
     }
   };
 
-  const fetchMyRequests = async () => {
+  const fetchMyRequests = async (isInitialLoad = false) => {
     try {
       const response = await api.get('/requests/my');
       const requests = response.data.data.requests || [];
@@ -147,6 +147,18 @@ const HomePage = () => {
           .map(r => r.donationId)
       );
       setRequestedDonations(requestedIds);
+      
+      // On initial load, mark all existing requests as viewed
+      // so only NEW requests after this point show a notification
+      if (isInitialLoad && normalized.length > 0) {
+        const requestIds = normalized.map(r => r.id);
+        const newViewedRequests = new Set([...viewedRequests, ...requestIds]);
+        setViewedRequests(newViewedRequests);
+        
+        // Persist to localStorage
+        const storageKey = `viewed_requests_${user.id || user._id}`;
+        localStorage.setItem(storageKey, JSON.stringify([...newViewedRequests]));
+      }
     } catch (error) {
       console.error('Error fetching requests:', error);
     }
@@ -161,11 +173,23 @@ const HomePage = () => {
     }
   };
 
-  const fetchDonationRequests = async () => {
+  const fetchDonationRequests = async (isInitialLoad = false) => {
     try {
       const response = await api.get('/requests/donations');
       const requests = response.data.data.requests || [];
       setDonationRequests(requests);
+      
+      // On initial load, mark all existing requests as viewed
+      // so only NEW requests after this point show a notification
+      if (isInitialLoad && requests.length > 0) {
+        const requestIds = requests.map(r => r._id || r.id);
+        const newViewedRequests = new Set([...viewedRequests, ...requestIds]);
+        setViewedRequests(newViewedRequests);
+        
+        // Persist to localStorage
+        const storageKey = `viewed_requests_${user.id || user._id}`;
+        localStorage.setItem(storageKey, JSON.stringify([...newViewedRequests]));
+      }
     } catch (error) {
       console.error('Error fetching donation requests:', error);
     }
