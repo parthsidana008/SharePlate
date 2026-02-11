@@ -179,19 +179,82 @@ VITE_API_URL=http://localhost:5000/api
 ```
 shareplate/
 ├── Backend/
-│   ├── controllers/    # Business logic
-│   ├── models/         # Database schemas
-│   ├── routes/         # API routes
-│   ├── middleware/     # Auth & validation
-│   ├── socket/         # Real-time handlers
-│   └── server.js
+│   ├── config/
+│   │   └── database.js          # MongoDB connection
+│   ├── controllers/
+│   │   ├── ai.controller.js     # AI/Gemini logic
+│   │   ├── auth.controller.js   # Authentication logic
+│   │   ├── donation.controller.js
+│   │   ├── message.controller.js
+│   │   └── request.controller.js
+│   ├── middleware/
+│   │   ├── auth.middleware.js   # JWT verification
+│   │   └── errorHandler.js      # Error handling
+│   ├── models/
+│   │   ├── User.model.js
+│   │   ├── Donation.model.js
+│   │   ├── Request.model.js
+│   │   └── Message.model.js
+│   ├── routes/
+│   │   ├── ai.routes.js
+│   │   ├── auth.routes.js
+│   │   ├── donation.routes.js
+│   │   ├── message.routes.js
+│   │   ├── request.routes.js
+│   │   └── user.routes.js
+│   ├── socket/
+│   │   ├── socketServer.js      # Socket.IO initialization
+│   │   ├── socketHandlers.js    # Event handlers
+│   │   ├── handlers/
+│   │   │   ├── chatHandler.js
+│   │   │   └── requestHandler.js
+│   │   └── middleware/
+│   │       └── socketAuth.js    # Socket authentication
+│   ├── utils/
+│   │   └── generateToken.js
+│   ├── .env
+│   ├── package.json
+│   └── server.js                # Entry point
+│
 ├── Frontend/
-│   ├── components/     # React components
-│   ├── context/        # State management
-│   ├── pages/          # Page components
-│   ├── services/       # API & Socket clients
-│   └── App.jsx
-```
+│   ├── components/
+│   │   ├── AddDonation.jsx      # Donation form with AI
+│   │   ├── AIChat.jsx           # Chat assistant
+│   │   ├── DonationCard.jsx     # Donation item display
+│   │   ├── DonationRequests.jsx # Donor's request management
+│   │   ├── EditDonation.jsx     # Edit donation form
+│   │   ├── ErrorBoundary.jsx    # Error handling
+│   │   ├── Hero.jsx             # Landing hero section
+│   │   ├── LandingNavbar.jsx    # Public navbar
+│   │   ├── Login.jsx            # Login form
+│   │   ├── MyDonations.jsx      # Donor's donations list
+│   │   ├── MyRequests.jsx       # Recipient's requests list
+│   │   ├── Navbar.jsx           # Authenticated navbar
+│   │   ├── ProtectedRoute.jsx   # Route protection
+│   │   └── Register.jsx         # Registration form
+│   ├── context/
+│   │   ├── AuthContext.jsx      # Auth state management
+│   │   └── SocketContext.jsx    # Socket.IO state
+│   ├── pages/
+│   │   ├── HomePage.jsx         # Main dashboard
+│   │   └── LandingPage.jsx      # Public landing page
+│   ├── services/
+│   │   ├── geminiService.js     # Gemini AI client
+│   │   ├── locationService.js   # Geolocation
+│   │   ├── messageService.js    # Message API
+│   │   └── socketService.js     # Socket.IO client
+│   ├── utils/
+│   │   └── api.js               # Axios instance
+│   ├── .env (optional)
+│   ├── index.html
+│   ├── index.jsx                # React entry point
+│   ├── App.jsx                  # Main app component
+│   ├── package.json
+│   ├── vite.config.js
+│   └── vercel.json              # Vercel deployment config
+│
+└── README.md                    # This file
+
 
 ---
 
