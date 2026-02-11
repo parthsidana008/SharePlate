@@ -1,8 +1,10 @@
-import { Clock, MapPin, CheckCircle2, ShoppingBag, Edit2, Trash2 } from 'lucide-react';
+import { Clock, MapPin, CheckCircle2, ShoppingBag, Edit2, Trash2, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 const DonationCard = ({ donation, onRequest, onEdit, onDelete, isDonorOwned = false, isRequested = false }) => {
   const { user } = useAuth();
+  const [isRequesting, setIsRequesting] = useState(false);
   
   const getTypeColor = (type) => {
     switch (type) {
@@ -11,6 +13,18 @@ const DonationCard = ({ donation, onRequest, onEdit, onDelete, isDonorOwned = fa
       case 'Vegan': return 'bg-emerald-100 text-emerald-800';
       case 'Bakery': return 'bg-amber-100 text-amber-800';
       default: return 'bg-slate-100 text-slate-800';
+    }
+  };
+
+  const handleRequest = async () => {
+    if (isRequested || isRequesting) return;
+    setIsRequesting(true);
+    try {
+      await onRequest(donation);
+    } catch (error) {
+      console.error('Error requesting donation:', error);
+    } finally {
+      setIsRequesting(false);
     }
   };
 
@@ -82,15 +96,26 @@ const DonationCard = ({ donation, onRequest, onEdit, onDelete, isDonorOwned = fa
              </div>
            ) : (
              <button 
-               onClick={() => !isRequested && onRequest(donation)}
-               disabled={isRequested}
-               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors active:scale-95 ${
+               onClick={handleRequest}
+               disabled={isRequested || isRequesting}
+               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
                  isRequested
                    ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                   : 'bg-slate-900 text-white hover:bg-slate-800'
+                   : isRequesting
+                   ? 'bg-slate-900 text-white opacity-50 cursor-not-allowed'
+                   : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95'
                }`}
              >
-               {isRequested ? 'Requested' : 'Request'}
+               {isRequesting ? (
+                 <>
+                   <Loader2 className="w-4 h-4 animate-spin" />
+                   Requesting...
+                 </>
+               ) : isRequested ? (
+                 'Requested'
+               ) : (
+                 'Request'
+               )}
              </button>
            )}
         </div>
