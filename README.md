@@ -254,7 +254,7 @@ shareplate/
 │   └── vercel.json              # Vercel deployment config
 │
 └── README.md                    # This file
-
+```
 
 ---
 
