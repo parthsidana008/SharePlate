@@ -36,7 +36,7 @@ SharePlate connects food donors with recipients to combat food waste and hunger.
 
 **Frontend:** React, Vite, React Router, Socket.IO Client, Axios, Tailwind CSS, Gemini AI  
 **Backend:** Node.js, Express, MongoDB, Mongoose, Socket.IO, JWT, bcryptjs  
-**Deployment:** Vercel (Frontend), MongoDB Atlas (Database)
+**Deployment:** Vercel (Frontend), Backend(Render), MongoDB Atlas (Database)
 
 ---
 
@@ -144,62 +144,6 @@ npm run dev
 - **Frontend**: Vercel
 - **Backend**: Render/Railway (or your hosting platform)
 - **Database**: MongoDB Atlas
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js (v18 or higher)
-- MongoDB (local or Atlas)
-- npm or yarn
-- Gemini API Key ([Get it here](https://makersuite.google.com/app/apikey))
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/shareplate.git
-   cd shareplate
-   ```
-
-2. **Setup Backend**
-   ```bash
-   cd Backend
-   npm install
-   
-   # Create .env file
-   cp .env.example .env
-   # Edit .env with your configuration
-   ```
-
-3. **Setup Frontend**
-   ```bash
-   cd ../Frontend
-   npm install
-   
-   # Create .env file (optional)
-   # Add VITE_API_URL if needed
-   ```
-
-4. **Start Development Servers**
-
-   **Terminal 1 - Backend:**
-   ```bash
-   cd Backend
-   npm run dev
-   ```
-
-   **Terminal 2 - Frontend:**
-   ```bash
-   cd Frontend
-   npm run dev
-   ```
-
-5. **Access the application**
-   - Frontend: `http://localhost:5173`
-   - Backend API: `http://localhost:5000`
 
 ---
 
