@@ -254,7 +254,7 @@ shareplate/
 ## 🚀 Deployment
 
 **Frontend (Vercel):** Connect repo → Select `Frontend` folder → Deploy  
-**Backend:** Deploy to Render/Railway with environment variables  
+**Backend:** Deploy to Render with environment variables  
 **Database:** MongoDB Atlas cluster
 
 ---
@@ -269,6 +269,6 @@ MIT License - Free to use and modify
 
 **Made with ❤️ to combat food waste**
 
-[⭐ Star this repo](https://github.com/yourusername/shareplate) • [Live Demo](https://share-plate-mu.vercel.app/)
+[⭐ Star this repo](https://github.com/yourusername/shareplate) • [Live Demo]()
 
 </div>
