@@ -13,9 +13,7 @@ const Register = ({ onLogin }) => {
     role: 'recipient',
     phone: '',
     location: {
-      city: '',
-      area: '',
-      zipCode: ''
+      area: ''
     }
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -141,7 +139,7 @@ const Register = ({ onLogin }) => {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  placeholder="John Doe"
+                  placeholder="Enter your full name"
                   className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-slate-900 placeholder-slate-400"
                 />
               </div>
@@ -160,7 +158,7 @@ const Register = ({ onLogin }) => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  placeholder="you@example.com"
+                  placeholder="Enter your email address"
                   className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-slate-900 placeholder-slate-400"
                 />
               </div>
@@ -249,38 +247,7 @@ const Register = ({ onLogin }) => {
               </div>
             </div>
 
-            {/* Location Fields */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  City
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    name="location.city"
-                    value={formData.location.city}
-                    onChange={handleChange}
-                    placeholder="City"
-                    className="w-full pl-9 pr-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-slate-900 placeholder-slate-400"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Zip Code
-                </label>
-                <input
-                  type="text"
-                  name="location.zipCode"
-                  value={formData.location.zipCode}
-                  onChange={handleChange}
-                  placeholder="Zip Code"
-                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-slate-900 placeholder-slate-400"
-                />
-              </div>
-            </div>
+
 
             {/* Submit Button */}
             <button
