@@ -4,7 +4,7 @@
 
 **Connecting communities through food - Zero hunger, zero waste**
 
-**[Live Demo]()**
+**[Live Demo](https://share-plate-mu.vercel.app/)**
 
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-19.2.1-blue)](https://reactjs.org/)
@@ -276,6 +276,6 @@ MIT License - Free to use and modify
 
 **Made with ❤️ to combat food waste**
 
-[⭐ Star this repo](https://github.com/yourusername/shareplate) • [Live Demo](s)
+[⭐ Star this repo](https://github.com/yourusername/shareplate) • [Live Demo](https://share-plate-mu.vercel.app/)
 
 </div>
